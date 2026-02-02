@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Advanced Whiteboard</title>
+
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #111;
+        font-family: Arial, sans-serif;
+    }
+
+    #toolbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background: #222;
+        padding: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        z-index: 10;
+    }
+
+    .tool {
+        background: #444;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .color {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid white;
+    }
+
+    canvas {
+        position: absolute;
+        top: 60px;
+        left: 0;
+    }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+    <div class="tool" id="penTool">Pen</div>
+    <div class="tool" id="lineTool">Line</div>
+    <div class="tool" id="rulerTool">Ruler</div>
+    <div class="tool" id="eraserTool">Eraser</div>
+
+    <div class="tool" id="sizeSmall">Small</div>
+    <div class="tool" id="sizeMed">Medium</div>
+    <div class="tool" id="sizeLarge">Large</div>
+
+    <div class="color" style="background:red" data-color="red"></div>
+    <div class="color" style="background:yellow" data-color="yellow"></div>
+    <div class="color" style="background:blue" data-color="blue"></div>
+    <div class="color" style="background:white" data-color="white"></div>
+
+    <div class="tool" id="clear">Clear</div>
+    <div class="tool" id="save">Save</div>
+</div>
+
+<canvas id="board"></canvas>
+
+<script>
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - 60;
+
+    let drawing = false;
+    let tool = "pen";
+    let penSize = 4;
+    let penColor = "white";
+
+    let startX = 0;
+    let startY = 0;
+
+    function start(e) {
+        drawing = true;
+        startX = e.clientX;
+        startY = e.clientY - 60;
+        ctx.beginPath();
+    }
+
+    function end() {
+        drawing = false;
+        ctx.beginPath();
+    }
+
+    function draw(e) {
+        if (!drawing) return;
+
+        let x = e.clientX;
+        let y = e.clientY - 60;
+
+        ctx.lineWidth = penSize;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = penColor;
+
+        if (tool === "pen") {
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        if (tool === "eraser") {
+            ctx.strokeStyle = "#111";
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        if (tool === "line" || tool === "ruler") {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            redrawSaved();
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+    }
+
+    // Save drawing state for line preview
+    let savedImage = null;
+    function saveState() {
+        savedImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    }
+    function redrawSaved() {
+        if (savedImage) ctx.putImageData(savedImage, 0, 0);
+    }
+
+    // Tools
+    document.getElementById("penTool").onclick = () => tool = "pen";
+    document.getElementById("lineTool").onclick = () => { tool = "line"; saveState(); };
+    document.getElementById("rulerTool").onclick = () => { tool = "ruler"; saveState(); };
+    document.getElementById("eraserTool").onclick = () => tool = "eraser";
+
+    // Sizes
+    document.getElementById("sizeSmall").onclick = () => penSize = 3;
+    document.getElementById("sizeMed").onclick = () => penSize = 6;
+    document.getElementById("sizeLarge").onclick = () => penSize = 12;
+
+    // Colours
+    document.querySelectorAll(".color").forEach(c => {
+        c.onclick = () => penColor = c.dataset.color;
+    });
+
+    // Clear
+    document.getElementById("clear").onclick = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+
+    // Save as image
+    document.getElementById("save").onclick = () => {
+        const link = document.createElement("a");
+        link.download = "whiteboard.png";
+        link.href = canvas.toDataURL();
+        link.click();
+    };
+
+    // Events
+    canvas.addEventListener("mousedown", start);
+    canvas.addEventListener("mouseup", end);
+    canvas.addEventListener("mousemove", draw);
+</script>
+
+</body>
+</html>
